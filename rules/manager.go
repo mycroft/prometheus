@@ -226,6 +226,7 @@ type Group struct {
 	name                 string
 	file                 string
 	interval             time.Duration
+	delayAtStart         time.Duration
 	rules                []Rule
 	seriesInPreviousEval []map[string]labels.Labels // One per Rule.
 	staleSeries          []labels.Labels
@@ -249,6 +250,7 @@ type Group struct {
 type GroupOptions struct {
 	Name, File    string
 	Interval      time.Duration
+	DelayAtStart  time.Duration
 	Rules         []Rule
 	ShouldRestore bool
 	Opts          *ManagerOptions
@@ -274,6 +276,7 @@ func NewGroup(o GroupOptions) *Group {
 		name:                 o.Name,
 		file:                 o.File,
 		interval:             o.Interval,
+		delayAtStart:         o.DelayAtStart,
 		rules:                o.Rules,
 		shouldRestore:        o.ShouldRestore,
 		opts:                 o.Opts,
@@ -302,7 +305,8 @@ func (g *Group) run(ctx context.Context) {
 	defer close(g.terminated)
 
 	// Wait an initial amount to have consistently slotted intervals.
-	evalTimestamp := g.evalTimestamp().Add(g.interval)
+	evalTimestamp := g.evalTimestamp().Add(g.interval).Add(g.delayAtStart)
+
 	select {
 	case <-time.After(time.Until(evalTimestamp)):
 	case <-g.done:
@@ -983,6 +987,11 @@ func (m *Manager) LoadGroups(
 				itv = time.Duration(rg.Interval)
 			}
 
+			das := time.Duration(0)
+			if rg.DelayAtStart != 0 {
+				das = time.Duration(rg.DelayAtStart)
+			}
+
 			rules := make([]Rule, 0, len(rg.Rules))
 			for _, r := range rg.Rules {
 				expr, err := parser.ParseExpr(r.Expr.Value)
@@ -1014,6 +1023,7 @@ func (m *Manager) LoadGroups(
 				Name:          rg.Name,
 				File:          fn,
 				Interval:      itv,
+				DelayAtStart:  das,
 				Rules:         rules,
 				ShouldRestore: shouldRestore,
 				Opts:          m.opts,

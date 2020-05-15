@@ -103,9 +103,10 @@ func (g *RuleGroups) Validate(node ruleGroups) (errs []error) {
 
 // RuleGroup is a list of sequentially evaluated recording and alerting rules.
 type RuleGroup struct {
-	Name     string         `yaml:"name"`
-	Interval model.Duration `yaml:"interval,omitempty"`
-	Rules    []RuleNode     `yaml:"rules"`
+	Name         string         `yaml:"name"`
+	Interval     model.Duration `yaml:"interval,omitempty"`
+	DelayAtStart model.Duration `yaml:"delay_at_start,omitempty"`
+	Rules        []RuleNode     `yaml:"rules"`
 }
 
 // Rule describes an alerting or recording rule.
